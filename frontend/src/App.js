@@ -333,6 +333,229 @@ function App() {
     "Show me production trends over time"
   ];
 
+  // ERD Rendering Functions
+  const renderTableSchema = (table) => {
+    const isSelected = selectedTable?.table_name === table.table_name;
+    const isConnectionSource = connectionStart?.table_name === table.table_name;
+    
+    return (
+      <div
+        key={table.table_name}
+        className={`absolute bg-white border-2 rounded-lg shadow-lg p-4 min-w-48 cursor-move select-none transition-all duration-200 ${
+          isSelected ? 'border-blue-500 shadow-xl' : 'border-gray-300'
+        } ${isConnectionSource ? 'border-green-500 bg-green-50' : ''}`}
+        style={{
+          left: table.position?.x || 100,
+          top: table.position?.y || 100,
+          zIndex: isSelected ? 10 : 1
+        }}
+        draggable
+        onDragStart={(e) => handleTableDragStart(e, table)}
+        onDrag={(e) => handleTableDrag(e, table)}
+        onClick={() => handleTableClick(table)}
+      >
+        <div className="bg-blue-600 text-white px-3 py-2 rounded-t -mx-4 -mt-4 mb-3">
+          <h3 className="font-bold text-sm">{table.table_name}</h3>
+          {table.description && (
+            <p className="text-xs opacity-90 mt-1">{table.description}</p>
+          )}
+        </div>
+
+        <div className="space-y-1">
+          {table.columns?.map((column, index) => (
+            <div
+              key={index}
+              className={`flex items-center text-xs p-1 rounded ${
+                column.primary_key ? 'bg-yellow-100 font-semibold' : 'bg-gray-50'
+              }`}
+            >
+              <div className="flex-1">
+                <span className={column.primary_key ? 'text-yellow-700' : 'text-gray-700'}>
+                  {column.name}
+                </span>
+              </div>
+              <div className="text-gray-500 text-xs">
+                {column.type}
+                {column.primary_key && <span className="ml-1 text-yellow-600">🔑</span>}
+                {!column.nullable && <span className="ml-1 text-red-500">*</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="absolute -top-2 -right-2 w-4 h-4 bg-blue-500 rounded-full cursor-pointer hover:bg-blue-600"
+             title="Click to connect tables"></div>
+        <div className="absolute -bottom-2 -left-2 w-4 h-4 bg-blue-500 rounded-full cursor-pointer hover:bg-blue-600"
+             title="Click to connect tables"></div>
+      </div>
+    );
+  };
+
+  const renderConnectionLines = () => {
+    return tableRelationships.map((relationship, index) => {
+      const fromTable = tableSchemas.find(t => t.table_name === relationship.from_table);
+      const toTable = tableSchemas.find(t => t.table_name === relationship.to_table);
+      
+      if (!fromTable || !toTable) return null;
+
+      const fromX = (fromTable.position?.x || 100) + 96;
+      const fromY = (fromTable.position?.y || 100) + 50;
+      const toX = (toTable.position?.x || 100) + 96;
+      const toY = (toTable.position?.y || 100) + 50;
+
+      return (
+        <svg
+          key={index}
+          className="absolute top-0 left-0 pointer-events-none"
+          style={{ width: '100%', height: '100%', zIndex: 0 }}
+        >
+          <defs>
+            <marker
+              id={`arrowhead-${index}`}
+              markerWidth="10"
+              markerHeight="7"
+              refX="9"
+              refY="3.5"
+              orient="auto"
+            >
+              <polygon
+                points="0 0, 10 3.5, 0 7"
+                fill={relationship.relationship_type === 'one-to-many' ? '#3b82f6' : '#10b981'}
+              />
+            </marker>
+          </defs>
+          <line
+            x1={fromX}
+            y1={fromY}
+            x2={toX}
+            y2={toY}
+            stroke={relationship.relationship_type === 'one-to-many' ? '#3b82f6' : '#10b981'}
+            strokeWidth="2"
+            markerEnd={`url(#arrowhead-${index})`}
+          />
+          <text
+            x={(fromX + toX) / 2}
+            y={(fromY + toY) / 2 - 10}
+            fill="#6b7280"
+            fontSize="10"
+            textAnchor="middle"
+            className="pointer-events-auto cursor-pointer"
+            onClick={() => deleteTableRelationship(relationship._id)}
+            title="Click to delete relationship"
+          >
+            {relationship.relationship_type}
+          </text>
+        </svg>
+      );
+    });
+  };
+
+  const renderERDBuilder = () => {
+    return (
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
+          <h2 className="text-xl font-semibold">Entity Relationship Diagram Builder</h2>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setIsConnecting(!isConnecting)}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                isConnecting
+                  ? 'bg-green-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              {isConnecting ? 'Cancel Connection' : 'Connect Tables'}
+            </button>
+            <button
+              onClick={loadTableSchemas}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        <div className="relative">
+          <div
+            className="relative bg-gradient-to-br from-gray-50 to-gray-100 min-h-96"
+            style={{ height: '600px', width: '100%' }}
+            onDragOver={handleCanvasDragOver}
+            onDrop={handleCanvasDrop}
+          >
+            <div
+              className="absolute inset-0 opacity-20"
+              style={{
+                backgroundImage: `radial-gradient(circle, #94a3b8 1px, transparent 1px)`,
+                backgroundSize: '20px 20px'
+              }}
+            ></div>
+
+            {renderConnectionLines()}
+            {tableSchemas.map(table => renderTableSchema(table))}
+
+            {isConnecting && (
+              <div className="absolute top-4 left-4 bg-green-100 border border-green-300 text-green-800 px-4 py-2 rounded-lg">
+                <p className="text-sm font-medium">Connection Mode Active</p>
+                <p className="text-xs">Click on two tables to create a relationship</p>
+                {connectionStart && (
+                  <p className="text-xs mt-1">
+                    From: <span className="font-semibold">{connectionStart.table_name}</span> → Click target table
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {selectedTable && (
+          <div className="border-t bg-gray-50 p-6">
+            <h3 className="text-lg font-semibold mb-4">Table Details: {selectedTable.table_name}</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 className="font-medium mb-2">Columns</h4>
+                <div className="space-y-1">
+                  {selectedTable.columns?.map((column, index) => (
+                    <div key={index} className="flex justify-between text-sm">
+                      <span className={column.primary_key ? 'font-semibold text-yellow-700' : ''}>
+                        {column.name}
+                      </span>
+                      <span className="text-gray-500">
+                        {column.type}
+                        {column.primary_key && ' (PK)'}
+                        {!column.nullable && ' (NOT NULL)'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <h4 className="font-medium mb-2">Relationships</h4>
+                <div className="space-y-1">
+                  {tableRelationships
+                    .filter(rel => rel.from_table === selectedTable.table_name || rel.to_table === selectedTable.table_name)
+                    .map((rel, index) => (
+                      <div key={index} className="text-sm">
+                        <span className="font-medium">{rel.from_table}</span>
+                        <span className="text-gray-500 mx-2">→</span>
+                        <span className="font-medium">{rel.to_table}</span>
+                        <span className="text-xs text-gray-500 ml-2">({rel.relationship_type})</span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => setSelectedTable(null)}
+              className="mt-4 px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors"
+            >
+              Close Details
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
