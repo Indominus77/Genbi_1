@@ -525,6 +525,108 @@ async def dashboard_overview():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Dashboard error: {str(e)}")
 
+# ERD Management Endpoints
+@app.get("/api/table-schemas")
+async def get_table_schemas():
+    """Get all table schemas for ERD"""
+    try:
+        schemas = list(db.table_schemas.find({}, {"_id": 0}))
+        return {"schemas": schemas}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching table schemas: {str(e)}")
+
+@app.post("/api/table-schemas")
+async def create_table_schema(schema: TableSchema):
+    """Create new table schema"""
+    try:
+        schema_doc = schema.dict()
+        schema_doc["_id"] = str(uuid.uuid4())
+        db.table_schemas.insert_one(schema_doc)
+        return {"message": "Table schema created", "id": schema_doc["_id"]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating table schema: {str(e)}")
+
+@app.put("/api/table-schemas/{table_name}")
+async def update_table_schema(table_name: str, schema: TableSchema):
+    """Update table schema position and details"""
+    try:
+        schema_doc = schema.dict()
+        result = db.table_schemas.update_one(
+            {"table_name": table_name},
+            {"$set": schema_doc}
+        )
+        if result.modified_count > 0:
+            return {"message": "Table schema updated"}
+        else:
+            raise HTTPException(status_code=404, detail="Table schema not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating table schema: {str(e)}")
+
+@app.get("/api/table-relationships")
+async def get_table_relationships():
+    """Get all table relationships for ERD"""
+    try:
+        relationships = list(db.table_relationships.find({}, {"_id": 0}))
+        return {"relationships": relationships}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching table relationships: {str(e)}")
+
+@app.post("/api/table-relationships")
+async def create_table_relationship(relationship: TableRelationship):
+    """Create new table relationship"""
+    try:
+        relationship_doc = relationship.dict()
+        relationship_doc["_id"] = str(uuid.uuid4())
+        db.table_relationships.insert_one(relationship_doc)
+        return {"message": "Table relationship created", "id": relationship_doc["_id"]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating table relationship: {str(e)}")
+
+@app.delete("/api/table-relationships/{relationship_id}")
+async def delete_table_relationship(relationship_id: str):
+    """Delete table relationship"""
+    try:
+        result = db.table_relationships.delete_one({"_id": relationship_id})
+        if result.deleted_count > 0:
+            return {"message": "Table relationship deleted"}
+        else:
+            raise HTTPException(status_code=404, detail="Table relationship not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting table relationship: {str(e)}")
+
+@app.get("/api/erd-configurations")
+async def get_erd_configurations():
+    """Get all ERD configurations"""
+    try:
+        configurations = list(db.erd_configurations.find({}, {"_id": 0}))
+        return {"configurations": configurations}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching ERD configurations: {str(e)}")
+
+@app.post("/api/erd-configurations")
+async def create_erd_configuration(erd: ERDConfiguration):
+    """Create new ERD configuration"""
+    try:
+        erd_doc = erd.dict()
+        erd_doc["_id"] = str(uuid.uuid4())
+        erd_doc["created_date"] = datetime.now().isoformat()
+        db.erd_configurations.insert_one(erd_doc)
+        return {"message": "ERD configuration created", "id": erd_doc["_id"]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating ERD configuration: {str(e)}")
+
+@app.get("/api/erd-configurations/{erd_name}")
+async def get_erd_configuration(erd_name: str):
+    """Get specific ERD configuration by name"""
+    try:
+        configuration = db.erd_configurations.find_one({"name": erd_name}, {"_id": 0})
+        if configuration:
+            return {"configuration": configuration}
+        else:
+            raise HTTPException(status_code=404, detail="ERD configuration not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching ERD configuration: {str(e)}")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)
