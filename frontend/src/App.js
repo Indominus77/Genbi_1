@@ -30,6 +30,9 @@ function App() {
   useEffect(() => {
     loadDashboardData();
     loadSemanticMappings();
+    loadTableSchemas();
+    loadTableRelationships();
+    loadERDConfigurations();
   }, []);
 
   const loadDashboardData = async () => {
