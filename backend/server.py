@@ -321,11 +321,17 @@ def init_sample_data():
     db.quality_metrics.insert_many(quality_metrics)
     db.equipment_downtime.insert_many(equipment_downtime)
     db.semantic_mappings.insert_many(semantic_mappings)
+    db.table_schemas.insert_many(table_schemas)
+    db.table_relationships.insert_many(table_relationships)
+    db.erd_configurations.insert_many(erd_configurations)
     
     print(f"Initialized {len(production_data)} production records")
     print(f"Initialized {len(quality_metrics)} quality records")
     print(f"Initialized {len(equipment_downtime)} downtime records")
     print(f"Initialized {len(semantic_mappings)} semantic mappings")
+    print(f"Initialized {len(table_schemas)} table schemas")
+    print(f"Initialized {len(table_relationships)} table relationships")
+    print(f"Initialized {len(erd_configurations)} ERD configurations")
 
 async def query_lmstudio(prompt: str) -> str:
     """Query LMStudio for natural language processing"""
