@@ -39,6 +39,26 @@ class SemanticMapping(BaseModel):
     description: str
     table_name: str
 
+class TableSchema(BaseModel):
+    table_name: str
+    columns: List[Dict[str, Any]]
+    position: Optional[Dict[str, float]] = None
+    description: Optional[str] = None
+
+class TableRelationship(BaseModel):
+    from_table: str
+    to_table: str
+    from_column: str
+    to_column: str
+    relationship_type: str  # "one-to-one", "one-to-many", "many-to-many"
+    description: Optional[str] = None
+
+class ERDConfiguration(BaseModel):
+    name: str
+    tables: List[TableSchema]
+    relationships: List[TableRelationship]
+    description: Optional[str] = None
+
 # Initialize sample data
 def init_sample_data():
     """Initialize sample tyre manufacturing data"""
