@@ -17,6 +17,16 @@ function App() {
     table_name: ''
   });
 
+  // ERD State
+  const [tableSchemas, setTableSchemas] = useState([]);
+  const [tableRelationships, setTableRelationships] = useState([]);
+  const [erdConfigurations, setErdConfigurations] = useState([]);
+  const [selectedTable, setSelectedTable] = useState(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionStart, setConnectionStart] = useState(null);
+  const [draggedTable, setDraggedTable] = useState(null);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+
   useEffect(() => {
     loadDashboardData();
     loadSemanticMappings();
