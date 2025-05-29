@@ -3,6 +3,7 @@ import unittest
 import json
 import sys
 from datetime import datetime
+import uuid
 
 class GenBIAPITester:
     def __init__(self, base_url="https://5041aa39-bdbf-431d-8310-44c70da6152e.preview.emergentagent.com"):
@@ -23,6 +24,10 @@ class GenBIAPITester:
                 response = requests.get(url, headers=headers)
             elif method == 'POST':
                 response = requests.post(url, json=data, headers=headers)
+            elif method == 'PUT':
+                response = requests.put(url, json=data, headers=headers)
+            elif method == 'DELETE':
+                response = requests.delete(url, headers=headers)
 
             success = response.status_code == expected_status
             if success:
@@ -135,6 +140,159 @@ class GenBIAPITester:
             if 'pipeline' in response:
                 print(f"Pipeline: {json.dumps(response['pipeline'][:2])}...")
         return success
+    
+    # ERD Builder API Tests
+    def test_table_schemas_get(self):
+        """Test getting table schemas for ERD"""
+        success, response = self.run_test(
+            "Get Table Schemas",
+            "GET",
+            "api/table-schemas",
+            200
+        )
+        if success:
+            schemas = response.get('schemas', [])
+            print(f"Retrieved {len(schemas)} table schemas")
+            for schema in schemas[:3]:  # Show first 3 schemas
+                print(f"- {schema.get('table_name')}: {len(schema.get('columns', []))} columns")
+                if 'position' in schema:
+                    print(f"  Position: x={schema['position'].get('x')}, y={schema['position'].get('y')}")
+        return success
+    
+    def test_table_relationships_get(self):
+        """Test getting table relationships for ERD"""
+        success, response = self.run_test(
+            "Get Table Relationships",
+            "GET",
+            "api/table-relationships",
+            200
+        )
+        if success:
+            relationships = response.get('relationships', [])
+            print(f"Retrieved {len(relationships)} table relationships")
+            for rel in relationships[:3]:  # Show first 3 relationships
+                print(f"- {rel.get('from_table')} → {rel.get('to_table')} ({rel.get('relationship_type')})")
+                print(f"  Columns: {rel.get('from_column')} → {rel.get('to_column')}")
+        return success
+    
+    def test_erd_configurations_get(self):
+        """Test getting ERD configurations"""
+        success, response = self.run_test(
+            "Get ERD Configurations",
+            "GET",
+            "api/erd-configurations",
+            200
+        )
+        if success:
+            configs = response.get('configurations', [])
+            print(f"Retrieved {len(configs)} ERD configurations")
+            for config in configs:
+                print(f"- {config.get('name')}: {len(config.get('tables', []))} tables, {len(config.get('relationships', []))} relationships")
+        return success
+    
+    def test_table_schema_update(self, table_name):
+        """Test updating a table schema position"""
+        # First get the current schema
+        _, response = self.run_test(
+            f"Get Table Schema for {table_name}",
+            "GET",
+            "api/table-schemas",
+            200
+        )
+        
+        schemas = response.get('schemas', [])
+        table_schema = next((s for s in schemas if s.get('table_name') == table_name), None)
+        
+        if not table_schema:
+            print(f"❌ Table schema for {table_name} not found")
+            return False
+        
+        # Update the position
+        new_x = 200 + int(datetime.now().timestamp()) % 300
+        new_y = 150 + int(datetime.now().timestamp()) % 200
+        
+        updated_schema = table_schema.copy()
+        if 'position' not in updated_schema:
+            updated_schema['position'] = {}
+        updated_schema['position']['x'] = new_x
+        updated_schema['position']['y'] = new_y
+        
+        success, response = self.run_test(
+            f"Update Table Schema Position for {table_name}",
+            "PUT",
+            f"api/table-schemas/{table_name}",
+            200,
+            data=updated_schema
+        )
+        
+        if success:
+            print(f"Updated {table_name} position to x={new_x}, y={new_y}")
+        
+        return success
+    
+    def test_table_relationship_create(self):
+        """Test creating a new table relationship"""
+        # Create a test relationship
+        test_relationship = {
+            "from_table": "production_data",
+            "to_table": "quality_metrics",
+            "from_column": "production_line",
+            "to_column": "production_line",
+            "relationship_type": "one-to-many",
+            "description": f"Test relationship created at {datetime.now().isoformat()}"
+        }
+        
+        success, response = self.run_test(
+            "Create Table Relationship",
+            "POST",
+            "api/table-relationships",
+            200,
+            data=test_relationship
+        )
+        
+        if success:
+            print(f"Created relationship with ID: {response.get('id')}")
+            print(f"From: {test_relationship['from_table']} → To: {test_relationship['to_table']}")
+        
+        return success
+    
+    def test_table_relationship_delete(self):
+        """Test deleting a table relationship"""
+        # First get all relationships
+        _, response = self.run_test(
+            "Get Table Relationships for Delete Test",
+            "GET",
+            "api/table-relationships",
+            200
+        )
+        
+        relationships = response.get('relationships', [])
+        if not relationships:
+            print("❌ No relationships found to delete")
+            return False
+        
+        # Find a relationship to delete (preferably a test one)
+        relationship_to_delete = next(
+            (r for r in relationships if r.get('description', '').startswith('Test relationship')),
+            relationships[0]
+        )
+        
+        relationship_id = relationship_to_delete.get('_id')
+        if not relationship_id:
+            print("❌ No relationship ID found to delete")
+            return False
+        
+        success, _ = self.run_test(
+            f"Delete Table Relationship {relationship_id}",
+            "DELETE",
+            f"api/table-relationships/{relationship_id}",
+            200
+        )
+        
+        if success:
+            print(f"Successfully deleted relationship between {relationship_to_delete.get('from_table')} and {relationship_to_delete.get('to_table')}")
+        
+        return success
 
 def main():
     # Setup
@@ -165,6 +323,27 @@ def main():
     
     for query in test_queries:
         tester.test_natural_language_query(query)
+    
+    # Test ERD Builder APIs
+    print("\n===== ERD Builder API Testing =====\n")
+    
+    # Test table schemas endpoint
+    tester.test_table_schemas_get()
+    
+    # Test table relationships endpoint
+    tester.test_table_relationships_get()
+    
+    # Test ERD configurations endpoint
+    tester.test_erd_configurations_get()
+    
+    # Test updating a table schema position
+    tester.test_table_schema_update("production_data")
+    
+    # Test creating a new relationship
+    tester.test_table_relationship_create()
+    
+    # Test deleting a relationship
+    tester.test_table_relationship_delete()
     
     # Print results
     print(f"\n📊 Tests passed: {tester.tests_passed}/{tester.tests_run}")
