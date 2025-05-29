@@ -55,6 +55,36 @@ function App() {
     }
   };
 
+  const loadTableSchemas = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/table-schemas`);
+      const data = await response.json();
+      setTableSchemas(data.schemas || []);
+    } catch (error) {
+      console.error('Error loading table schemas:', error);
+    }
+  };
+
+  const loadTableRelationships = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/table-relationships`);
+      const data = await response.json();
+      setTableRelationships(data.relationships || []);
+    } catch (error) {
+      console.error('Error loading table relationships:', error);
+    }
+  };
+
+  const loadERDConfigurations = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/erd-configurations`);
+      const data = await response.json();
+      setErdConfigurations(data.configurations || []);
+    } catch (error) {
+      console.error('Error loading ERD configurations:', error);
+    }
+  };
+
   const handleNaturalQuery = async (e) => {
     e.preventDefault();
     if (!naturalQuery.trim()) return;
