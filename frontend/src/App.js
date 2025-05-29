@@ -134,6 +134,113 @@ function App() {
     }
   };
 
+  // ERD Functions
+  const handleTableDragStart = (e, table) => {
+    setDraggedTable(table);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleTableDrag = (e, table) => {
+    e.preventDefault();
+    setMousePosition({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleCanvasDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleCanvasDrop = async (e) => {
+    e.preventDefault();
+    if (!draggedTable) return;
+
+    const canvas = e.currentTarget;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Update table position
+    const updatedTable = {
+      ...draggedTable,
+      position: { x, y }
+    };
+
+    try {
+      await fetch(`${API_BASE_URL}/api/table-schemas/${draggedTable.table_name}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedTable),
+      });
+
+      // Update local state
+      setTableSchemas(prev => 
+        prev.map(table => 
+          table.table_name === draggedTable.table_name 
+            ? updatedTable 
+            : table
+        )
+      );
+    } catch (error) {
+      console.error('Error updating table position:', error);
+    }
+
+    setDraggedTable(null);
+  };
+
+  const handleTableClick = (table) => {
+    if (isConnecting) {
+      if (!connectionStart) {
+        setConnectionStart(table);
+      } else if (connectionStart.table_name !== table.table_name) {
+        // Create relationship
+        createTableRelationship(connectionStart, table);
+        setConnectionStart(null);
+        setIsConnecting(false);
+      }
+    } else {
+      setSelectedTable(table);
+    }
+  };
+
+  const createTableRelationship = async (fromTable, toTable) => {
+    const relationship = {
+      from_table: fromTable.table_name,
+      to_table: toTable.table_name,
+      from_column: fromTable.columns.find(col => col.primary_key)?.name || fromTable.columns[0]?.name,
+      to_column: toTable.columns.find(col => col.primary_key)?.name || toTable.columns[0]?.name,
+      relationship_type: 'one-to-many',
+      description: `Relationship between ${fromTable.table_name} and ${toTable.table_name}`
+    };
+
+    try {
+      await fetch(`${API_BASE_URL}/api/table-relationships`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(relationship),
+      });
+
+      loadTableRelationships();
+    } catch (error) {
+      console.error('Error creating table relationship:', error);
+    }
+  };
+
+  const deleteTableRelationship = async (relationshipId) => {
+    try {
+      await fetch(`${API_BASE_URL}/api/table-relationships/${relationshipId}`, {
+        method: 'DELETE',
+      });
+
+      loadTableRelationships();
+    } catch (error) {
+      console.error('Error deleting table relationship:', error);
+    }
+  };
+
   const renderChart = (data, type = 'bar') => {
     if (!data || data.length === 0) return null;
 
