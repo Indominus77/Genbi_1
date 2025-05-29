@@ -184,6 +184,138 @@ def init_sample_data():
         }
     ]
     
+    # Initialize table schemas for ERD
+    table_schemas = [
+        {
+            "_id": str(uuid.uuid4()),
+            "table_name": "production_data",
+            "columns": [
+                {"name": "_id", "type": "string", "primary_key": True},
+                {"name": "date", "type": "string", "nullable": False},
+                {"name": "production_line", "type": "string", "nullable": False},
+                {"name": "shift", "type": "string", "nullable": False},
+                {"name": "tyre_type", "type": "string", "nullable": False},
+                {"name": "planned_production", "type": "integer", "nullable": False},
+                {"name": "actual_production", "type": "integer", "nullable": False},
+                {"name": "defect_count", "type": "integer", "nullable": False},
+                {"name": "downtime_minutes", "type": "integer", "nullable": False},
+                {"name": "operator_id", "type": "string", "nullable": True},
+                {"name": "raw_material_usage", "type": "integer", "nullable": True},
+                {"name": "energy_consumption", "type": "integer", "nullable": True}
+            ],
+            "position": {"x": 100, "y": 100},
+            "description": "Daily production data by line and shift"
+        },
+        {
+            "_id": str(uuid.uuid4()),
+            "table_name": "quality_metrics",
+            "columns": [
+                {"name": "_id", "type": "string", "primary_key": True},
+                {"name": "date", "type": "string", "nullable": False},
+                {"name": "production_line", "type": "string", "nullable": False},
+                {"name": "defect_type", "type": "string", "nullable": False},
+                {"name": "defect_count", "type": "integer", "nullable": False},
+                {"name": "severity", "type": "string", "nullable": False},
+                {"name": "root_cause", "type": "string", "nullable": True}
+            ],
+            "position": {"x": 400, "y": 100},
+            "description": "Quality defect tracking and analysis"
+        },
+        {
+            "_id": str(uuid.uuid4()),
+            "table_name": "equipment_downtime",
+            "columns": [
+                {"name": "_id", "type": "string", "primary_key": True},
+                {"name": "date", "type": "string", "nullable": False},
+                {"name": "equipment_type", "type": "string", "nullable": False},
+                {"name": "equipment_id", "type": "string", "nullable": False},
+                {"name": "downtime_minutes", "type": "integer", "nullable": False},
+                {"name": "reason", "type": "string", "nullable": False},
+                {"name": "production_line", "type": "string", "nullable": True}
+            ],
+            "position": {"x": 700, "y": 100},
+            "description": "Equipment downtime tracking and reasons"
+        },
+        {
+            "_id": str(uuid.uuid4()),
+            "table_name": "operators",
+            "columns": [
+                {"name": "operator_id", "type": "string", "primary_key": True},
+                {"name": "name", "type": "string", "nullable": False},
+                {"name": "shift_preference", "type": "string", "nullable": True},
+                {"name": "skill_level", "type": "string", "nullable": False},
+                {"name": "certification_date", "type": "string", "nullable": True}
+            ],
+            "position": {"x": 100, "y": 350},
+            "description": "Operator information and qualifications"
+        },
+        {
+            "_id": str(uuid.uuid4()),
+            "table_name": "tyre_specifications",
+            "columns": [
+                {"name": "tyre_type", "type": "string", "primary_key": True},
+                {"name": "category", "type": "string", "nullable": False},
+                {"name": "target_pressure", "type": "float", "nullable": False},
+                {"name": "weight_kg", "type": "float", "nullable": False},
+                {"name": "material_cost", "type": "float", "nullable": False}
+            ],
+            "position": {"x": 400, "y": 350},
+            "description": "Tyre type specifications and costs"
+        }
+    ]
+    
+    # Initialize table relationships for ERD
+    table_relationships = [
+        {
+            "_id": str(uuid.uuid4()),
+            "from_table": "production_data",
+            "to_table": "operators",
+            "from_column": "operator_id",
+            "to_column": "operator_id",
+            "relationship_type": "many-to-one",
+            "description": "Each production record is associated with an operator"
+        },
+        {
+            "_id": str(uuid.uuid4()),
+            "from_table": "production_data",
+            "to_table": "tyre_specifications",
+            "from_column": "tyre_type",
+            "to_column": "tyre_type",
+            "relationship_type": "many-to-one",
+            "description": "Production data references tyre specifications"
+        },
+        {
+            "_id": str(uuid.uuid4()),
+            "from_table": "quality_metrics",
+            "to_table": "production_data",
+            "from_column": "production_line",
+            "to_column": "production_line",
+            "relationship_type": "one-to-many",
+            "description": "Quality metrics are linked to production lines"
+        },
+        {
+            "_id": str(uuid.uuid4()),
+            "from_table": "equipment_downtime",
+            "to_table": "production_data",
+            "from_column": "production_line",
+            "to_column": "production_line",
+            "relationship_type": "one-to-many",
+            "description": "Equipment downtime affects production lines"
+        }
+    ]
+    
+    # Create sample ERD configuration
+    erd_configurations = [
+        {
+            "_id": str(uuid.uuid4()),
+            "name": "Tyre Manufacturing ERD",
+            "description": "Complete entity relationship diagram for tyre manufacturing operations",
+            "tables": table_schemas,
+            "relationships": table_relationships,
+            "created_date": datetime.now().isoformat()
+        }
+    ]
+    
     # Insert sample data
     db.production_data.insert_many(production_data)
     db.quality_metrics.insert_many(quality_metrics)
