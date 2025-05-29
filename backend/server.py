@@ -68,6 +68,9 @@ def init_sample_data():
     db.quality_metrics.delete_many({})
     db.equipment_downtime.delete_many({})
     db.semantic_mappings.delete_many({})
+    db.table_schemas.delete_many({})
+    db.table_relationships.delete_many({})
+    db.erd_configurations.delete_many({})
     
     # Production lines and tyre types
     production_lines = ["Line-A-Radial", "Line-B-Bias", "Line-C-HeavyDuty"]
