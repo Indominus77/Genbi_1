@@ -783,6 +783,12 @@ function App() {
             </div>
           </div>
         )}
+
+        {activeTab === 'erd' && (
+          <div className="space-y-8">
+            {renderERDBuilder()}
+          </div>
+        )}
       </main>
     </div>
   );
